@@ -15,7 +15,12 @@ To run this project locally, first of all you need to clone this repository, the
 
 #### Configuration ####
 
-The repository has a file named `config-template.js`, copy it, rename to `config.js` and fill with your environment data.
+You need to confgiure the following environment variables: 
+
+* HOST: hostname to connect to LDAP server, format "ladp://<domain>:<port>"
+* USER_BASEDN: base dn of users on your LDAP server 
+* ADMIN_ENTRYDN: entry dn of an admin user that can search for other users
+* ADMIN_PASSWD: admin password
 
 #### Install Librariess ####
 
@@ -25,10 +30,13 @@ Run the following command:
 npm install ldapjs
 ```
 
-### Running Project Locally ###
+### Running Project on AWS ###
 
-After install libraries and configure your `config.js` file, run the following command:
+after install libraries, zip all files and upload to a lambda function on AWS. Configure environment variables on this function and configure a test event with the structure below:
 
-```
-node index.js
+```json
+{ 
+    "uid": "", //user uid to validate login
+    "passwd": ""
+}
 ```

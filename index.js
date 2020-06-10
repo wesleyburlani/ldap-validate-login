@@ -1,54 +1,67 @@
 var ldap = require('ldapjs');
 var config = require('./config');
 
-var client = createClient(config.host);
+exports.handler = async function (event, context, callback) {
 
-var userEntryDn = `uid=${config.user.uid},${config.user.baseDn}`;
+    console.log("\nEVENT: \n\n" + JSON.stringify(event, null, 2))
 
-// connecting to user
-client.bind(userEntryDn, config.user.passwd, function (userLoginError) {
+    var uid = event.uid;
+    var passwd = event.passwd.toUpperCase();
 
-    if (userLoginError) {
-        return client.unbind(unbindCallback);
-    }
-    //connecting to admin user to get user information
-    client.bind(config.admin.entryDn, config.admin.passwd, function (adminLoginError) {
+    var client = createClient(config.host);
 
-        if (adminLoginError) {
+    var userEntryDn = `uid=${uid},${config.user.baseDn}`;
+
+    var userInfo = {};
+
+    // connecting to user
+    client.bind(userEntryDn, passwd, function (userLoginError) {
+
+        if (userLoginError) {
+            callback("There was a problem validating login, it could be VPN connection or invalid credentials");
             return client.unbind(unbindCallback);
         }
-        //searching for user information
-        client.search(config.user.baseDn, getSearchOptions(config.user.uid), function (error, res) {
+        //connecting to admin user to get user information
+        client.bind(config.admin.entryDn, config.admin.passwd, function (adminLoginError) {
 
-            res.on('searchEntry', function (entry) {
-                // prints user information
-                console.log(JSON.stringify(entry.object, null, 2));
+            if (adminLoginError) {
+                callback("invalid admin login");
+                return client.unbind(unbindCallback);
+            }
+            //searching for user information
+            client.search(config.user.baseDn, getSearchOptions(uid), function (error, res) {
+
+                res.on('searchEntry', function (entry) {
+                    // prints user information
+                    userInfo = entry.object;
+                });
+                res.on('end', function (result) {
+                    client.unbind(unbindCallback);
+                });
             });
-            res.on('end', function (result) {
-                client.unbind(unbindCallback);
-            });
-        });
-    })
-});
-
-
-function getSearchOptions(userUid) {
-    return {
-        filter: `(uid=${userUid})`,
-        scope: 'sub',
-    };
-}
-
-function createClient(host) {
-    return ldap.createClient({
-        url: host,
-        timeout: 5000,
-        connectTimeout: 10000
+        })
     });
-}
 
-function unbindCallback(error) {
-    if(error) {
-        console.log(error);
+    callback(undefined, userInfo);
+
+    function getSearchOptions(userUid) {
+        return {
+            filter: `(uid=${userUid})`,
+            scope: 'sub',
+        };
+    }
+
+    function createClient(host) {
+        return ldap.createClient({
+            url: host,
+            timeout: 5000,
+            connectTimeout: 10000
+        });
+    }
+
+    function unbindCallback(error) {
+        if (error) {
+            console.log(error);
+        }
     }
 }
