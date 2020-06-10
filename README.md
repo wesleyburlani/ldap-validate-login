@@ -40,3 +40,5 @@ after install libraries, zip all files and upload to a lambda function on AWS. C
     "passwd": ""
 }
 ```
+
+Its recommended to change lambda execution timeout to at least 10 seconds to get correct bind connection timeout errors.
